@@ -1,0 +1,64 @@
+services:
+  chaperia_db:
+    image: postgres:18-alpine
+    container_name: chaperia_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-chaperia_prod_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-76964482}
+    volumes:
+      - chaperia_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chaperia_internal
+
+  chaperia_backend:
+    build: ./Backend
+    container_name: chaperia_backend
+    restart: always
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DB_HOST: chaperia_db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-76964482}
+      DB_NAME: ${DB_NAME:-chaperia_prod_db}
+      DB_SYNCHRONIZE: "true"
+      JWT_SECRET: ${JWT_SECRET:-chaperia_pro_super_secret_key_bolivia_chile_2026}
+      UPLOAD_DIR: uploads
+    volumes:
+      - chaperia_uploads_data:/app/uploads
+    depends_on:
+      chaperia_db:
+        condition: service_healthy
+    networks:
+      - chaperia_internal
+
+  chaperia_frontend:
+    build: ./Frontend
+    container_name: chaperia_frontend
+    restart: always
+    volumes:
+      - chaperia_uploads_data:/usr/share/nginx/html/uploads:ro
+    depends_on:
+      - chaperia_backend
+    networks:
+      - chaperia_internal
+      - proxy_network
+
+volumes:
+  chaperia_pg_data:
+  chaperia_uploads_data:
+
+networks:
+  chaperia_internal:
+    driver: bridge
+  proxy_network:
+    external: true
+

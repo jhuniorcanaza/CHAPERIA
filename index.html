@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapería Pro — Presentación Interactiva del Sistema (Chile - Bolivia)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: #111827;
+      --bg-panel: #1e293b;
+      --border-col: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid #1f2937;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; color: #000; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- BARRA SUPERIOR FIJA (CONTROLES DE DEMOSTRACIÓN PARA LA REUNIÓN) -->
+  <header class="no-print sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo y Título -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-600/20">
+          CP
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base tracking-tight text-white">CHAPERÍA PRO • ERP TALLER</h1>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              ● Tiempo Real Activo (Sin F5)
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Gestión Operativa, Inventario, Auditoría Fotográfica y Costeo (🇨🇱 Taller Chile ↔ 🇧🇴 Administración Bolivia)</p>
+        </div>
+      </div>
+
+      <!-- Controles para mostrar en la reunión -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <!-- Selector de Usuario (Solo 3 usuarios con login; chaperos sin acceso) -->
+        <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+          <button id="btnRoleBolivia" onclick="setRole('bolivia')" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white transition">
+            🇧🇴 Admin Bolivia (Dueño / Luis / Marcelo)
+          </button>
+          <button id="btnRoleChile" onclick="setRole('chile')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">
+            🇨🇱 Encargado Chile (Alfredo)
+          </button>
+        </div>
+
+        <!-- Selector Bimoneda -->
+        <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+          <button id="btnCurrUSD" onclick="setCurrency('USD')" class="px-2.5 py-1.5 rounded-lg font-mono font-bold bg-slate-800 text-amber-400">
+            USD ($)
+          </button>
+          <button id="btnCurrCLP" onclick="setCurrency('CLP')" class="px-2.5 py-1.5 rounded-lg font-mono text-slate-400 hover:text-white">
+            CLP (Peso Chileno)
+          </button>
+        </div>
+
+        <!-- Botón Demostración Push sin F5 -->
+        <button onclick="triggerLiveAlert()" class="px-3.5 py-2 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition flex items-center gap-1.5 shadow-lg shadow-amber-500/10">
+          <span>⚡ Simular Alerta en Vivo (Sin F5)</span>
+        </button>
+
+        <!-- Campana de Notificaciones -->
+        <button onclick="triggerLiveAlert()" class="relative p-2 rounded-xl bg-slate-800 border border-slate-700 hover:border-blue-500 transition">
+          <span class="text-base">🔔</span>
+          <span id="notifBadge" class="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-600 text-white">
+            4
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NOTIFICACIÓN FLOTANTE EN VIVO (DEMO SIN F5) -->
+  <div id="liveToast" class="hidden fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 border-2 border-amber-500 rounded-2xl p-4 shadow-2xl">
+    <div class="flex items-start justify-between gap-3">
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-500 text-slate-950">PUSH INSTANTÁNEO • NEXT.JS WEBSOCKET</span>
+          <span class="text-xs font-mono text-slate-400">Hace 1 seg</span>
+        </div>
+        <p id="toastTitle" class="font-bold text-sm text-white"></p>
+        <p id="toastBody" class="text-xs text-slate-300 leading-relaxed"></p>
+      </div>
+      <button onclick="document.getElementById('liveToast').classList.add('hidden')" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE EVIDENCIA FOTOGRÁFICA -->
+  <div id="photoModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-xs font-bold text-emerald-400">AUDITORÍA FOTOGRÁFICA • OPTIMIZADO EN WEBP</span>
+          <h3 id="modalTitle" class="font-bold text-base text-white">Evidencia Registrada en Servidor</h3>
+        </div>
+        <button onclick="closePhotoModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+      <div class="p-6 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-2">
+        <div id="modalIcon" class="text-5xl">📸</div>
+        <p id="modalDesc" class="text-xs text-slate-300"></p>
+        <div class="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs">
+          Archivo original: 5.8 MB (.JPG) → Comprimido: 104 KB (.WEBP)
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="closePhotoModal()" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Cerrar Vista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENÚ DE NAVEGACIÓN DE LOS 7 MÓDULOS -->
+  <nav class="no-print bg-slate-900/60 border-b border-slate-800 px-4 overflow-x-auto">
+    <div class="max-w-7xl mx-auto flex items-center gap-1.5 py-2.5 min-w-max text-xs font-semibold">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white shadow">
+        1. 📊 Panel & Alertas en Vivo
+      </button>
+      <button onclick="switchTab('recepcion')" id="tab-recepcion" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        2. 🚢 Traspaso & 📸 Check-in Fotos
+      </button>
+      <button onclick="switchTab('cotizacion')" id="tab-cotizacion" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        3. 📋 Cotizador (Doble Firma 🟡→🟢)
+      </button>
+      <button onclick="switchTab('ordenes')" id="tab-ordenes" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        4. ⏱️ Avance OT (%), Prórrogas y Multas
+      </button>
+      <button onclick="switchTab('repuestos')" id="tab-repuestos" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        5. 🧩 Repuestos & 📦 Almacén (~15 Insumos)
+      </button>
+      <button onclick="switchTab('herramientas')" id="tab-herramientas" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        6. 🔧 Herramientas & ⭐ Ranking Técnicos
+      </button>
+      <button onclick="switchTab('costeo')" id="tab-costeo" class="tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+        7. 💰 Costeo & 📄 Informe PDF Cliente
+      </button>
+    </div>
+  </nav>
+
+  <!-- CINTA DE ROL ACTIVO -->
+  <div class="no-print bg-slate-950 border-b border-slate-800/80 px-4 py-2 text-xs">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <span id="roleBannerText" class="text-slate-300">
+        👁️ <strong>Sesión Activa: Gerencia Bolivia (Dueño / Luis / Marcelo)</strong> — Control de cotizaciones, prórrogas, multas a contratistas, inventario y rentabilidad. <em>(Los chaperos y pintores NO tienen usuario en el sistema).</em>
+      </span>
+      <span class="text-slate-400 font-mono">3 Usuarios Autorizados (1 Chile • 2 Bolivia)</span>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- ==========================================
+         1. DASHBOARD EJECUTIVO Y ALERTAS EN TIEMPO REAL
+         ========================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      <!-- Tarjetas KPI -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+            <span>VEHÍCULOS EN TALLER (CHILE)</span>
+            <span class="text-lg">🚘</span>
+          </div>
+          <div class="text-2xl font-black text-white font-mono">9 Autos</div>
+          <div class="text-xs text-slate-400">6 Internos (Importadora) • 3 Externos (Calle)</div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 space-y-1 border-rose-500/40">
+          <div class="flex items-center justify-between text-xs text-rose-400 font-semibold">
+            <span>ALERTAS DE ATRASO (CONTRATISTAS)</span>
+            <span class="text-lg">⏰</span>
+          </div>
+          <div class="text-2xl font-black text-rose-400 font-mono">2 Vencidos</div>
+          <div class="text-xs text-slate-400">Pendiente aplicar multa (-$20/d) o prórroga</div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+            <span>GASTO INSUMOS PROMEDIO / AUTO</span>
+            <span class="text-lg">🧪</span>
+          </div>
+          <div class="text-2xl font-black text-amber-400 font-mono money" data-usd="142">USD $142</div>
+          <div class="text-xs text-emerald-400">Lijas, gasolina, thinner, masilla y pintura</div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+            <span>BALANCE NETO MENSUAL TALLER</span>
+            <span class="text-lg">📈</span>
+          </div>
+          <div class="text-2xl font-black text-emerald-400 font-mono money" data-usd="4380">USD $4,380</div>
+          <div class="text-xs text-slate-400">Descontando fijos (Alquiler, luz, sueldos planta)</div>
+        </div>
+      </div>
+
+      <!-- CENTRO DE ALERTAS EN VIVO -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base text-white flex items-center gap-2">
+              🚨 Centro de Alertas Automáticas en Tiempo Real (Sin apretar Refresh / F5)
+            </h2>
+            <p class="text-xs text-slate-400">
+              Si dejas la computadora abierta en la mañana, las alertas aparecen al instante cuando algo se vence o cuando Alfredo registra un movimiento en Chile.
+            </p>
+          </div>
+          <span class="text-xs px-3 py-1 rounded-lg bg-slate-800 text-slate-300 font-mono">
+            Compresor Automático WebP: Activo
+          </span>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <!-- Alerta 1 -->
+          <div class="p-4 rounded-xl bg-rose-950/30 border border-rose-500/40 flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 max-w-3xl">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold">ATRASO DE TAREA • 3 DÍAS VENCIDO</span>
+                <span class="font-mono text-slate-300">OT #108 • Ford Ranger XLT 2022 (Cliente Interno)</span>
+              </div>
+              <p class="text-slate-200">
+                El contratista <strong>Mario Quispe (Chapero)</strong> debía terminar <em>"Chapería Puerta y Guardafango Derecho (Grado Fuerte)"</em> hace 3 días. Avance actual del vehículo: <strong>25% (2 de 8 tareas)</strong>.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="switchTab('ordenes')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700">
+                🌧️ Dar +2 Días Prórroga (Lluvia/Oxígeno)
+              </button>
+              <button onclick="switchTab('ordenes')" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">
+                💸 Aplicar Multa (-$60)
+              </button>
+            </div>
+          </div>
+
+          <!-- Alerta 2 -->
+          <div class="p-4 rounded-xl bg-amber-950/30 border border-amber-500/40 flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 max-w-3xl">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold">COTIZACIÓN EDITADA • FALTA APROBACIÓN CHILE</span>
+                <span class="font-mono text-slate-300">COT #204 • Toyota Rav4 2023 (Cliente Externo)</span>
+              </div>
+              <p class="text-slate-200">
+                <strong>Luis (Bolivia)</strong> negoció con el cliente y rebajó la cotización de <strong class="money" data-usd="2800">$2,800</strong> a <strong class="money" data-usd="2200">$2,200</strong> <em>(Condición: pasa a cola de 30 días en vez de 15 días)</em>. Requiere el clic en <strong>Aceptar</strong> de Alfredo (Chile).
+              </p>
+            </div>
+            <button onclick="switchTab('cotizacion')" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+              Revisar y Aprobar (🟡 → 🟢)
+            </button>
+          </div>
+
+          <!-- Alerta 3 -->
+          <div class="p-4 rounded-xl bg-blue-950/30 border border-blue-500/40 flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 max-w-3xl">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold">BAJA DE HERRAMIENTA + COMPRA CON CAJA CHICA</span>
+                <span class="font-mono text-slate-300">Reportado por Alfredo (Chile) • Hoy 10:15 AM</span>
+              </div>
+              <p class="text-slate-200">
+                Se dio de baja: <strong>Gata Hidráulica 1 Tonelada</strong> por <em>Mal uso (levantaron camioneta de 5 toneladas)</em>. Incluye foto de la herramienta rota y alerta de nueva compra.
+              </p>
+            </div>
+            <button onclick="switchTab('herramientas')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700">
+              📷 Ver Foto y Responsable
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA RESUMEN DE VEHÍCULOS EN TALLER -->
+      <div class="glass-card rounded-2xl p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-white">🚗 Estado en Vivo de Vehículos en el Taller de Chile</h3>
+          <span class="text-xs text-slate-400">Haz clic en cualquier fila para abrir su detalle operativo</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="py-2.5 px-3">Vehículo / Chasis (VIN)</th>
+                <th class="py-2.5 px-3">Modalidad Cliente</th>
+                <th class="py-2.5 px-3">Cola / Prioridad</th>
+                <th class="py-2.5 px-3">Chapero vs. Pintor (Separados)</th>
+                <th class="py-2.5 px-3">Repuestos</th>
+                <th class="py-2.5 px-3">Avance Cuantitativo</th>
+                <th class="py-2.5 px-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              <tr class="hover:bg-slate-800/50 cursor-pointer" onclick="switchTab('ordenes')">
+                <td class="py-3 px-3 font-bold text-white">Ford Ranger XLT 2022<br/><span class="font-mono font-normal text-slate-400">VIN: 1FTER4FH...892</span></td>
+                <td class="py-3 px-3"><span class="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">🏢 Interno (Importadora)</span></td>
+                <td class="py-3 px-3"><span class="text-rose-400 font-bold">🔥 Prioridad Alta (15d)</span></td>
+                <td class="py-3 px-3 text-slate-300">Chapero: Mario Q. (Contrato)<br/>Pintor: Carlos V. (Filtro Calidad)</td>
+                <td class="py-3 px-3"><span class="text-amber-400 font-medium">2/3 Recibidos 📸</span></td>
+                <td class="py-3 px-3 w-48">
+                  <div class="flex justify-between mb-1 font-mono font-bold text-amber-400"><span>25%</span><span>2/8 Tareas</span></div>
+                  <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width:25%"></div></div>
+                </td>
+                <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold">3d Retraso</span></td>
+              </tr>
+
+              <tr class="hover:bg-slate-800/50 cursor-pointer" onclick="switchTab('cotizacion')">
+                <td class="py-3 px-3 font-bold text-white">Toyota Rav4 Adventure 2023<br/><span class="font-mono font-normal text-slate-400">VIN: 2T3P1RFV...411</span></td>
+                <td class="py-3 px-3"><span class="px-2 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">👤 Externo (Calle)</span></td>
+                <td class="py-3 px-3"><span class="text-amber-400 font-bold">⏳ Cola 30 días (Rebaja)</span></td>
+                <td class="py-3 px-3 text-slate-400">Esperando aceptación de cotización</td>
+                <td class="py-3 px-3"><span class="text-emerald-400 font-medium">1/1 Recibido 📸</span></td>
+                <td class="py-3 px-3 w-48">
+                  <div class="flex justify-between mb-1 font-mono text-slate-400"><span>Cotización</span><span>Editada 🟡</span></div>
+                  <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div class="bg-blue-500 h-full" style="width:12%"></div></div>
+                </td>
+                <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full bg-amber-500 text-slate-950 font-bold">Firma Chile</span></td>
+              </tr>
+
+              <tr class="hover:bg-slate-800/50 cursor-pointer" onclick="switchTab('costeo')">
+                <td class="py-3 px-3 font-bold text-white">Chevrolet Tracker Premier 2023<br/><span class="font-mono font-normal text-slate-400">VIN: 3GNCJ8E5...104</span></td>
+                <td class="py-3 px-3"><span class="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">🏢 Interno (Importadora)</span></td>
+                <td class="py-3 px-3"><span class="text-emerald-400 font-bold">✅ Finalizado</span></td>
+                <td class="py-3 px-3 text-slate-300">Chapero: Pedro M. (Sueldo Fijo)<br/>Pintor: Carlos V. + Airbags (Ext.)</td>
+                <td class="py-3 px-3"><span class="text-emerald-400 font-medium">4/4 Instalados 📸</span></td>
+                <td class="py-3 px-3 w-48">
+                  <div class="flex justify-between mb-1 font-mono font-bold text-emerald-400"><span>100%</span><span>6/6 Tareas</span></div>
+                  <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full" style="width:100%"></div></div>
+                </td>
+                <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 font-bold">Informe PDF</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         2. PRE-INGRESO (NAVIERA / GRÚA) Y CHECK-IN FOTOGRÁFICO
+         ========================================== -->
+    <section id="view-recepcion" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Fase 0: Naviera y Orden de Traspaso -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-xs font-bold text-indigo-400">FASE 0 • SOLO CLIENTES INTERNOS (SUBASTAS EE.UU. IAAI / COPART)</span>
+              <h3 class="font-bold text-base text-white">🚢 Orden de Traspaso (PDF), Liberación Naviera y Grúa</h3>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300">Puerto Chile</span>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Para los vehículos importados por la propia empresa que deben entrar reparados a la aduana boliviana, el flujo inicia cuando llegan en barco al depósito de la naviera en Chile:
+          </p>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">1. Pago a Naviera y Recibo de Depósito</div>
+                <div class="text-slate-400">Naviera MSC • Lote #88412 • Ford Ranger XLT 2022</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">✓ Pagado</span>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">2. Orden de Traspaso en PDF (Para Almacenero Naviera)</div>
+                <div class="text-slate-400">Subida desde Bolivia para que Alfredo retire el vehículo</div>
+              </div>
+              <button onclick="openPhotoModal('Orden de Traspaso PDF — Naviera', 'Documento oficial de liberación entregado al encargado del lote naviero en Chile.')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold">
+                📄 Ver Orden PDF
+              </button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">3. Solicitud de Grúa (Depósito Puerto → Taller Chapería)</div>
+                <div class="text-slate-400">Gasto imputado a la Importadora (Separado de la contabilidad de la chapería)</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 font-bold">✓ Entregado en Taller</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fase 1: Recepción Fotográfica e Inventario del Vehículo -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-xs font-bold text-emerald-400">FASE 1 • CLIENTES INTERNOS Y EXTERNOS ("DE LA CALLE")</span>
+              <h3 class="font-bold text-base text-white">📸 Check-in Fotográfico e Inventario de Accesorios</h3>
+            </div>
+            <span class="text-xs font-mono text-slate-400">12/11/2026</span>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Al ingresar al taller, se levantan los asientos y se registra con fotos cada accesorio para evitar reclamos (<em>"me robaron mis pisos"</em>, <em>"me cambiaron la radio"</em>, <em>"mis faroles estaban sanos"</em>).
+          </p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked class="accent-emerald-500" />
+              <span>✅ Llanta de Auxilio</span>
+            </label>
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked class="accent-emerald-500" />
+              <span>✅ Gata Hidráulica</span>
+            </label>
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-rose-500/40 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" class="accent-emerald-500" />
+              <span class="text-rose-400 font-semibold">❌ Sin Pisos Traseros</span>
+            </label>
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked class="accent-emerald-500" />
+              <span>✅ Radio Original</span>
+            </label>
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-amber-500/40 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" class="accent-emerald-500" />
+              <span class="text-amber-400 font-semibold">⚠️ Farol Der. Roto</span>
+            </label>
+            <label class="p-2.5 rounded-xl bg-slate-900 border border-rose-500/40 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" class="accent-emerald-500" />
+              <span class="text-rose-400 font-semibold">❌ Airbag Volante Roto</span>
+            </label>
+          </div>
+
+          <!-- Galería Fotográfica Comprimida en WebP -->
+          <div class="p-4 rounded-xl bg-slate-900/90 border border-dashed border-blue-500/50 space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white">📷 Fotos Obligatorias de Recepción (Compresión WebP para VPS Hostinger)</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Ahorro 98% espacio</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2.5">
+              <div onclick="openPhotoModal('Foto 1: Frente Chocado al Ingresar', 'Evidencia del estado exacto en que llegó el capó y parachoques desde el puerto.')" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500 cursor-pointer text-center">
+                <div class="text-2xl mb-1">🚘</div>
+                <div class="font-semibold text-white truncate">1_Frente_Ingreso.webp</div>
+                <div class="text-slate-400 font-mono text-[11px]">5.4MB → <span class="text-emerald-400 font-bold">98KB</span></div>
+              </div>
+              <div onclick="openPhotoModal('Foto 2: Estado de Radio y Tablero', 'Prueba fotográfica del modelo y serie de la radio y airbags al ingresar.')" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500 cursor-pointer text-center">
+                <div class="text-2xl mb-1">📻</div>
+                <div class="font-semibold text-white truncate">2_Radio_Tablero.webp</div>
+                <div class="text-slate-400 font-mono text-[11px]">4.8MB → <span class="text-emerald-400 font-bold">84KB</span></div>
+              </div>
+              <div onclick="openPhotoModal('Foto 3: Maletera, Gata y Pisos', 'Asientos levantados mostrando que ingresó con gata pero sin pisos traseros.')" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500 cursor-pointer text-center">
+                <div class="text-2xl mb-1">🛞</div>
+                <div class="font-semibold text-white truncate">3_Interior_Pisos.webp</div>
+                <div class="text-slate-400 font-mono text-[11px]">6.1MB → <span class="text-emerald-400 font-bold">110KB</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         3. COTIZADOR CON GRADOS (LEVE/FUERTE) Y DOBLE APROBACIÓN (AMARILLO -> VERDE)
+         ========================================== -->
+    <section id="view-cotizacion" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Silueta Interactiva de Daños por Pieza -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-blue-400">PROPUESTA DE MEJORA • MAPA DE DAÑOS 2D</span>
+            <h3 class="font-bold text-base text-white">🚘 Selección de Grado: Leve vs. Fuerte</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Como indicó el dueño: en <strong>Chapería</strong> se clasifica en <strong>Leve (Suave)</strong> o <strong>Fuerte ("Hecho chuño")</strong>. En <strong>Pintura</strong> el precio es estándar.
+            </p>
+          </div>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Guardafango Izq.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border-2 border-rose-500 bg-rose-950/30 cursor-pointer transition">
+                <div class="font-bold text-white">Capó Delantero</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-rose-600 text-white font-bold">Chapería: FUERTE</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border-2 border-amber-500 bg-amber-950/30 cursor-pointer transition">
+                <div class="font-bold text-white">Guardafango Der.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold">Chapería: LEVE</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Puertas Izq.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Techo / Cabina</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border-2 border-rose-500 bg-rose-950/30 cursor-pointer transition">
+                <div class="font-bold text-white">Puerta Del. Der.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-rose-600 text-white font-bold">Chapería: FUERTE</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Costado Tras. Izq.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Maletera / Compuerta</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+              <div onclick="cyclePartDamage(this)" class="p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition">
+                <div class="font-bold text-white">Costado Tras. Der.</div>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400">Sano</span>
+              </div>
+            </div>
+            <p class="text-center text-slate-400 pt-1">👆 Haz clic en cualquier pieza para alternar: Sano → Leve → Fuerte</p>
+          </div>
+        </div>
+
+        <!-- Tabla de Cotización, Terceros y Doble Consentimiento -->
+        <div class="lg:col-span-2 glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="font-bold text-base text-white">Cotización #204 — Toyota Rav4 2023</h3>
+                <span id="quoteStatusBadge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-slate-950">
+                  🟡 CAMBIOS REALIZADOS (Pendiente Verificar en Chile)
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                Creada por: <strong>Alfredo (Chile)</strong> • Modificada por negociación con cliente: <strong>Luis (Bolivia)</strong>
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btnApproveQuote" onclick="approveQuote()" class="px-4 py-2 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition">
+                ✅ Aceptar Cotización (Firma Alfredo Chile) y Generar OT
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabla detallada -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-2">Trabajo / Pieza</th>
+                  <th class="py-2">Grado / Tipo</th>
+                  <th class="py-2">Costo Interno / Tercero</th>
+                  <th class="py-2">Cotizado Original</th>
+                  <th class="py-2">Acordado c/ Cliente</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">🔨 Chapería Capó Delantero</td>
+                  <td class="py-2.5"><span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold">FUERTE</span></td>
+                  <td class="py-2.5 font-mono text-slate-400 money" data-usd="120">$120 (Pago Chapero)</td>
+                  <td class="py-2.5 font-mono line-through text-slate-500 money" data-usd="350">$350</td>
+                  <td class="py-2.5 font-mono font-bold text-white money" data-usd="280">$280</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">🔨 Chapería Guardafango Derecho</td>
+                  <td class="py-2.5"><span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold">LEVE</span></td>
+                  <td class="py-2.5 font-mono text-slate-400 money" data-usd="50">$50 (Pago Chapero)</td>
+                  <td class="py-2.5 font-mono text-slate-300 money" data-usd="150">$150</td>
+                  <td class="py-2.5 font-mono font-bold text-white money" data-usd="150">$150</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">🎨 Preparado y Pintura Frontal (3 Piezas)</td>
+                  <td class="py-2.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">Estándar Pintura</span></td>
+                  <td class="py-2.5 font-mono text-slate-400 money" data-usd="150">$150 (Pago Pintor)</td>
+                  <td class="py-2.5 font-mono line-through text-slate-500 money" data-usd="450">$450</td>
+                  <td class="py-2.5 font-mono font-bold text-white money" data-usd="390">$390</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">🔌 Servicio Externo: Plastificado Volante y Airbags</td>
+                  <td class="py-2.5"><span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">Tercero (AirbagPro)</span></td>
+                  <td class="py-2.5 font-mono text-amber-400 font-bold money" data-usd="300">Cobro Tercero: $300</td>
+                  <td class="py-2.5 font-mono text-slate-300 money" data-usd="420">$420</td>
+                  <td class="py-2.5 font-mono font-bold text-emerald-400 money" data-usd="400">$400 (Margen +$100)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Auditoría de Versiones (Nada se borra) -->
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+            <div class="font-bold text-white flex items-center justify-between">
+              <span>📜 Registro de Auditoría de la Cotización (No se borra el monto original)</span>
+              <span class="text-slate-400 font-mono">Consentimiento Bolivia + Chile</span>
+            </div>
+            <p class="text-slate-300">• <strong>Versión 1 (Inicial - Alfredo en Chile):</strong> Cotizado en <strong class="money" data-usd="1370">$1,370</strong> (Entrega en 15 días).</p>
+            <p class="text-slate-300">• <strong>Versión 2 (Modificada - Autorizó: Luis en Bolivia):</strong> Acordado en <strong class="money" data-usd="1220">$1,220</strong>. <em>Motivo: "Se rebajó $150; el cliente acepta pasar a cola de 30 días".</em></p>
+            <p class="text-slate-300">• <strong>Opción 3ra Edición (Adenda por Desarme):</strong> Si al desarmar aparece un daño oculto, permite agregarlo adjuntando <strong>foto obligatoria del desarme</strong>.</p>
+            <p id="auditV3" class="text-amber-400 font-bold pt-1">👉 Estado actual: En espera de que Alfredo (Chile) pulse el botón "Aceptar Cotización" arriba.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         4. ÓRDENES DE TRABAJO (OT), AVANCE %, PRÓRROGAS Y MULTAS
+         ========================================== -->
+    <section id="view-ordenes" class="hidden space-y-6">
+      <div class="glass-card rounded-2xl p-5 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <span class="text-xs font-bold text-blue-400">ORDEN DE TRABAJO #108 • CONTROL ESTRICTO DE TIEMPOS Y CALIDAD</span>
+            <h3 class="font-bold text-lg text-white">Ford Ranger XLT 2022 — Separación de Chapería y Pintura</h3>
+            <p class="text-xs text-slate-400">
+              Evita que un mismo "maestro" chapee mal y lo tape con masilla: <strong>el Pintor recibe el auto y actúa como filtro del Chapero</strong>.
+            </p>
+          </div>
+
+          <!-- Medidor Cuantitativo de Avance -->
+          <div class="w-full sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl p-3.5">
+            <div class="flex items-center justify-between text-xs mb-1.5">
+              <span class="font-bold text-slate-300">AVANCE CUANTITATIVO:</span>
+              <span id="otProgressText" class="font-mono font-black text-base text-blue-400">25% (2 / 8 tareas)</span>
+            </div>
+            <div class="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div id="otProgressBar" class="bg-gradient-to-r from-blue-600 to-emerald-500 h-full transition-all duration-300" style="width: 25%"></div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1.5">☑️ Tiquea las casillas abajo para ver cómo sube el porcentaje</p>
+          </div>
+        </div>
+
+        <!-- Lista de las 8 Tareas -->
+        <div class="space-y-2.5 text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" checked onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>1. Desarme frontal y verificación de piezas internas (Con fotos)</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Técnico: <strong>Pedro M. (Planta Sueldo Fijo)</strong></span>
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">✓ Terminado</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" checked onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>2. Chapería Capó Delantero (Grado: Fuerte)</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Contratista: <strong>Mario Quispe (Chapero)</strong></span>
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">✓ Validado por Pintor</span>
+            </div>
+          </div>
+
+          <!-- TAREA 3: VENCIDA CON ACCIONES DE PRÓRROGA, MULTA O REASIGNACIÓN -->
+          <div class="p-4 rounded-xl bg-rose-950/20 border-2 border-rose-500/70 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label class="flex items-center gap-3 cursor-pointer font-bold text-white text-sm">
+                <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+                <span>3. Chapería Puerta Derecha y Guardafango (Grado: Fuerte)</span>
+              </label>
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="contractorAssignee" class="text-slate-200">Asignado a: <strong>Mario Quispe (Contratista ★★★☆☆)</strong></span>
+                <span id="taskDelayBadge" class="px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold">⚠️ Vencido hace 3 días</span>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <div class="space-y-1">
+                <div class="font-bold text-white">
+                  Pago Acordado por Contrato: <span class="font-mono text-amber-400">$300</span>
+                  <span id="penaltyCalculation" class="text-rose-400 font-mono"> → Multa sugerida (-$20/día × 3 días = -$60): Pagar $240</span>
+                </div>
+                <p id="extensionNote" class="text-slate-400">
+                  Opciones del Administrador: Dar flexibilidad (+2 días si llovió, faltó oxígeno o pintura), aplicar descuento económico o reasignar a otro chapero.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="grantExtension()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold">
+                  🌧️ Dar +2 Días Prórroga (Justificado)
+                </button>
+                <button onclick="applyPenalty()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">
+                  💸 Aplicar Descuento (-$60)
+                </button>
+                <button onclick="reassignWorker()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+                  🔄 Reasignar Personal
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>4. Preparación y Pintura Frente + Puerta Derecha (Asignado a Pintor Distinto)</span>
+            </label>
+            <span class="text-slate-400">Pintor: <strong>Carlos Vega (Contratista ★★★★★)</strong> • Plazo: 3 días</span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>5. Mecánica Sencilla en Taller: Cambio de Amortiguador y Rótula</span>
+            </label>
+            <span class="text-slate-400">Técnico: <strong>Pedro M. (Planta Sueldo Fijo)</strong> • Plazo: 1 día</span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>6. Tercero Externo: Reparación Eléctrica de Faroles Delanteros</span>
+            </label>
+            <span class="text-slate-400">Externo: <strong>ElectroAuto Iquique (★★★★☆)</strong></span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>7. Tercero Externo: Plastificado de Volante y Airbags</span>
+            </label>
+            <span class="text-slate-400">Externo: <strong>AirbagPro Chile (★★★★★)</strong></span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-3 cursor-pointer font-semibold text-white">
+              <input type="checkbox" onchange="recalcOTProgress()" class="ot-task-check w-4 h-4 accent-emerald-500" />
+              <span>8. Pulido final, inspección de calidad y generación de Informe PDF para Luis</span>
+            </label>
+            <span class="text-slate-400">Encargado: <strong>Alfredo (Jefe de Taller)</strong></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         5. REPUESTOS ("EN CUENTAGOTAS") E INSUMOS (~15 ÍTEMS + PINTURA COLORISTA)
+         ========================================== -->
+    <section id="view-repuestos" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Repuestos en Cuentagotas -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-blue-400">CONTROL DE PIEZAS POR VEHÍCULO (NO ES STOCK MASIVO)</span>
+            <h3 class="font-bold text-base text-white">🧩 Repuestos "En Cuentagotas" (Solicitado vs. Recibido + Foto)</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Registra qué repuestos pide el taller y cuáles van llegando con <strong>foto del repuesto y su código</strong> para evitar reclamos de que <em>"era original y me lo cambiaron"</em> o <em>"no le hace"</em>.
+            </p>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-bold text-white">1. Farol Delantero Derecho Original (Ford Ranger)</div>
+                <div class="text-slate-400">Recibido: 10/11/2026 • Código verificado: <span class="font-mono text-slate-200">FR-8821-OEM</span></div>
+              </div>
+              <button onclick="openPhotoModal('Farol Derecho Recibido — Código FR-8821-OEM', 'Foto tomada por Alfredo al recibir la caja en el taller de Chile.')" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">
+                📸 Ver Foto y Código
+              </button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-bold text-white">2. Amortiguador Delantero Derecho</div>
+                <div class="text-slate-400">Recibido: 11/11/2026 • Código verificado: <span class="font-mono text-slate-200">KYB-33910</span></div>
+              </div>
+              <button onclick="openPhotoModal('Amortiguador KYB-33910', 'Repuesto recibido conforme y entregado a mecánico de planta.')" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">
+                📸 Ver Foto y Código
+              </button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-bold text-rose-400">3. Parachoques Frontal (OBSERVADO: NO LE HACE)</div>
+                <div class="text-slate-300">El dueño envió versión 2019 en lugar de 2022. Respaldo fotográfico del código subido.</div>
+              </div>
+              <button onclick="openPhotoModal('Evidencia de Repuesto Incorrecto (Parachoques)', 'Foto del código de pieza demostrando al cliente que el repuesto que envió no corresponde al año del vehículo.')" class="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold">
+                📸 Ver Prueba
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Almacén de ~15 Insumos + Pintura Colorista -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-emerald-400">INVENTARIO SIMPLIFICADO (~15 INSUMOS) + PINTURA POR AUTO</span>
+            <h3 class="font-bold text-base text-white">📦 Stock de Almacén y Salidas por Vehículo / Tarea</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Las lijas (paquete de 30) y gasolina (bidón 20L) entran a stock y se descuentan por tarea. La pintura preparada con la tapa de gasolina se sube directo al auto con foto de factura.
+            </p>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-2">Insumo</th>
+                  <th class="py-2">Modalidad Compra</th>
+                  <th class="py-2">Disponible</th>
+                  <th class="py-2">Último Consumo Anotado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">Hojas de Lija (#80 / #220 / #400)</td>
+                  <td class="py-2.5 text-slate-400">Paquete × 30 hojas</td>
+                  <td class="py-2.5 font-mono font-bold text-emerald-400">42 hojas</td>
+                  <td class="py-2.5 text-slate-300">Ford Ranger (Capó): 3 hojas</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">Gasolina (Bidón Taller)</td>
+                  <td class="py-2.5 text-slate-400">Bidón × 20 Litros</td>
+                  <td class="py-2.5 font-mono font-bold text-emerald-400">11.5 Litros</td>
+                  <td class="py-2.5 text-slate-300">Ford Ranger (Limpieza): 1 Litro</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-white">Thinner / Masilla / Barniz / Oxígeno</td>
+                  <td class="py-2.5 text-slate-400">Stock Almacén</td>
+                  <td class="py-2.5 font-mono font-bold text-emerald-400">8 Unidades</td>
+                  <td class="py-2.5 text-slate-300">Toyota Rav4 (Guardafango): 0.5 L</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-semibold text-amber-400">🎨 Pintura Colorista (Tapa Gasolina)</td>
+                  <td class="py-2.5 text-slate-300">Compra Directa (700 ml)</td>
+                  <td class="py-2.5 font-mono text-white">Específico</td>
+                  <td class="py-2.5">
+                    <button onclick="openPhotoModal('Factura de Pintura Colorista (700 ml)', 'Boleta subida por Alfredo: 700ml pintura igualada con tapa de gasolina para Ford Ranger ($45).')" class="underline text-blue-400 font-bold">
+                      📸 Ver Factura ($45)
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         6. HERRAMIENTAS (BAJAS CON FOTO) Y RANKING DE TÉCNICOS (ESTRELLAS)
+         ========================================== -->
+    <section id="view-herramientas" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Control de Herramientas y Bajas -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-amber-400">ACTIVOS FIJOS Y ALERTAS DE CAJA CHICA</span>
+            <h3 class="font-bold text-base text-white">🔧 Inventario de Herramientas (Compra y Baja con Foto)</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Nadie puede comprar herramientas a libre antojo ni dar de baja sin foto y motivo (<em>desgaste normal</em> vs. <em>mal uso para cobrárselo al responsable</em>).
+            </p>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-4 rounded-xl bg-rose-950/30 border border-rose-500/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-rose-400 text-sm">🔴 DADA DE BAJA: Gata Hidráulica 1 Tonelada</span>
+                <span class="font-mono text-slate-400">Hoy 10:15 AM</span>
+              </div>
+              <p class="text-slate-200">
+                <strong>Quién la rompió:</strong> Mario Quispe • <strong>Causa registrada:</strong> <em>Mal uso (intentó levantar camioneta de 5 toneladas con gata de 1 tonelada)</em>.
+              </p>
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <button onclick="openPhotoModal('Baja de Herramienta: Gata Hidráulica Rota', 'Foto obligatoria subida por Alfredo para dar de baja en el sistema y descontar al responsable por mal uso.')" class="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold">
+                  📷 Ver Foto de Gata Rota
+                </button>
+                <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-semibold">
+                  🔔 Alerta: Alfredo registró compra de nueva gata ($65)
+                </span>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">🟢 Compresor Industrial 100L + Pistolas de Pintar</div>
+                <div class="text-slate-400">Fecha compra: 14/08/2026 • Estado: Operativo</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">En Taller</span>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">🟢 Amoladora Bosch + Juego de Llaves Combinadas</div>
+                <div class="text-slate-400">Fecha compra: 02/09/2026 • Estado: Operativo</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">En Taller</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calificación por Estrellas de Técnicos y Externos -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-blue-400">EVALUACIÓN DE DESEMPEÑO (INTERNOS Y TERCEROS)</span>
+            <h3 class="font-bold text-base text-white">⭐ Base de Datos y Calificación por Estrellas (1 a 5 ★)</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Califica cada trabajo terminado para saber a qué contratista o taller externo asignar trabajos difíciles y a quién no volver a llamar.
+            </p>
+          </div>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">Carlos Vega — Pintor (Contratista Interno)</div>
+                <div class="text-slate-400">14 vehículos pintados • Excelente acabado y puntualidad</div>
+              </div>
+              <span class="text-amber-400 font-bold text-sm">★★★★★ (5.0)</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">Pedro Mamani — Chapero / Mecánica Ligera (Sueldo Fijo)</div>
+                <div class="text-slate-400">Personal estable de planta (1 de los 2 fijos en taller)</div>
+              </div>
+              <span class="text-amber-400 font-bold text-sm">★★★★★ (4.8)</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">AirbagPro Iquique — Taller Externo (Volantes / Tableros)</div>
+                <div class="text-slate-400">Servicio de terceros confiable • Cumple plazos</div>
+              </div>
+              <span class="text-amber-400 font-bold text-sm">★★★★★ (4.9)</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-rose-400">Electrónica Sur — Eléctrico Externo (NO CONTRATAR)</div>
+                <div class="text-slate-300">Falló en los últimos 3 trabajos eléctricos y demoró entregas.</div>
+              </div>
+              <span class="text-rose-400 font-bold text-sm">★☆☆☆☆ (1.3)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         7. COSTEO ADMINISTRATIVO E INFORME FINAL PDF AL CLIENTE
+         ========================================== -->
+    <section id="view-costeo" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Costeo Dual -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-emerald-400">CONTROL FINANCIERO SIMPLE Y EFECTIVO</span>
+            <h3 class="font-bold text-base text-white">💰 Costeo por Vehículo y Prorrateo Mensual</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Muestra cuánto costó exactamente cada auto y, además, divide el gasto total mensual de insumos entre los autos atendidos más costos fijos.
+            </p>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+              <div class="font-bold text-white text-sm">1. Costeo por Unidad: Chevrolet Tracker Premier 2023</div>
+              <div class="flex justify-between"><span>(+) Cobro Total al Cliente:</span><span class="font-mono font-bold text-emerald-400 money" data-usd="1850">$1,850</span></div>
+              <div class="flex justify-between"><span>(-) Pago Contratistas (Chapería + Pintura):</span><span class="font-mono text-slate-300 money" data-usd="550">-$550</span></div>
+              <div class="flex justify-between"><span>(-) Pago a Terceros (Airbags y Eléctrico):</span><span class="font-mono text-slate-300 money" data-usd="300">-$300</span></div>
+              <div class="flex justify-between"><span>(-) Pintura Colorista + Lijas/Thinner/Gasolina:</span><span class="font-mono text-slate-300 money" data-usd="145">-$145</span></div>
+              <div class="border-t border-slate-800 pt-2 flex justify-between font-bold text-sm">
+                <span class="text-white">(=) Ganancia Operativa del Vehículo:</span>
+                <span class="font-mono text-emerald-400 money" data-usd="855">+$855</span>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+              <div class="font-bold text-white">2. Gastos Fijos Mensuales del Taller (Para Utilidad Neta)</div>
+              <p class="text-slate-400">
+                Descuenta automáticamente: Sueldo de Alfredo + 2 Sueldos Fijos de Planta + Alquiler Galpón + Luz/Servicios + Alimentación/Almuerzos + Prorrateo de insumos generales.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informe Final Automático para el Cliente -->
+        <div class="glass-card rounded-2xl p-5 border-2 border-blue-500/60 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-xs font-bold text-blue-400">GENERACIÓN AUTOMÁTICA AL LLEGAR AL 100%</span>
+              <h3 class="font-bold text-base text-white">📄 Informe Final para el Cliente (Notifica a Luis)</h3>
+            </div>
+            <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">
+              🖨️ Imprimir / Descargar PDF
+            </button>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+            <div class="flex justify-between border-b border-slate-800 pb-2">
+              <div>
+                <div class="font-bold text-white text-sm">INFORME DE ENTREGA DE UNIDAD</div>
+                <div class="text-slate-400">Chevrolet Tracker Premier 2023 • VIN: 3GNCJ8E5...104</div>
+              </div>
+              <div class="text-right font-mono">
+                <div class="text-slate-400">Ingreso: 01/11/2026</div>
+                <div class="text-emerald-400 font-bold">Finalizado: 12/11/2026 (11 días)</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="font-bold text-white mb-1">Detalle Cronológico de Actividades y Repuestos:</div>
+              <ul class="list-disc list-inside text-slate-300 space-y-1">
+                <li><strong>02/11/2026:</strong> Desarme frontal y cuadratura de chasis/capó.</li>
+                <li><strong>04/11/2026:</strong> Instalación de Farol Delantero Derecho Original (Cód. GM-9921).</li>
+                <li><strong>07/11/2026:</strong> Reconstrucción y plastificado de volante y airbags.</li>
+                <li><strong>11/11/2026:</strong> Pintura bicapa al horno y pulido general.</li>
+              </ul>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center pt-1">
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="font-bold text-rose-400">📸 1. ANTES</div>
+                <div class="text-slate-400 mt-0.5">Estado de ingreso</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="font-bold text-amber-400">📸 2. DESARME</div>
+                <div class="text-slate-400 mt-0.5">Chapeado y repuestos</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="font-bold text-emerald-400">📸 3. DESPUÉS</div>
+                <div class="text-slate-400 mt-0.5">Unidad terminada</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const CLP_RATE = 980;
+
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'recepcion', 'cotizacion', 'ordenes', 'repuestos', 'herramientas', 'costeo'];
+      tabs.forEach(t => {
+        document.getElementById('view-' + t).classList.add('hidden');
+        document.getElementById('tab-' + t).className = 'tab-btn px-3.5 py-2 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white';
+      });
+      document.getElementById('view-' + tabId).classList.remove('hidden');
+      document.getElementById('tab-' + tabId).className = 'tab-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white shadow font-bold';
+    }
+
+    function setRole(role) {
+      const btnBol = document.getElementById('btnRoleBolivia');
+      const btnChi = document.getElementById('btnRoleChile');
+      const banner = document.getElementById('roleBannerText');
+      if (role === 'bolivia') {
+        btnBol.className = 'px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white transition';
+        btnChi.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition';
+        banner.innerHTML = '👁️ <strong>Sesión Activa: Gerencia Bolivia (Dueño / Luis / Marcelo)</strong> — Control de cotizaciones, prórrogas, multas a contratistas, inventario y rentabilidad. <em>(Los chaperos y pintores NO tienen usuario).</em>';
+      } else {
+        btnChi.className = 'px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white transition';
+        btnBol.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition';
+        banner.innerHTML = '🛠️ <strong>Sesión Activa: Encargado de Taller en Chile (Alfredo)</strong> — Recepción con fotos, aceptación de cotizaciones modificadas (Amarillo → Verde), registro de avance, repuestos e insumos.';
+      }
+    }
+
+    function setCurrency(curr) {
+      document.getElementById('btnCurrUSD').className = curr === 'USD'
+        ? 'px-2.5 py-1.5 rounded-lg font-mono font-bold bg-slate-800 text-amber-400'
+        : 'px-2.5 py-1.5 rounded-lg font-mono text-slate-400 hover:text-white';
+      document.getElementById('btnCurrCLP').className = curr === 'CLP'
+        ? 'px-2.5 py-1.5 rounded-lg font-mono font-bold bg-slate-800 text-amber-400'
+        : 'px-2.5 py-1.5 rounded-lg font-mono text-slate-400 hover:text-white';
+
+      document.querySelectorAll('.money').forEach(el => {
+        const usd = parseFloat(el.getAttribute('data-usd'));
+        el.textContent = curr === 'USD'
+          ? 'USD $' + usd.toLocaleString('en-US')
+          : 'CLP $' + Math.round(usd * CLP_RATE).toLocaleString('es-CL');
+      });
+    }
+
+    let alertIdx = 0;
+    const demoAlerts = [
+      {
+        title: '🔧 Herramienta Dada de Baja en Chile (Con Foto)',
+        body: 'Alfredo reportó baja de "Llave Criquet 1/2" por rotura y solicitó reposición ($28). Llega al instante sin apretar F5.'
+      },
+      {
+        title: '🎨 Factura de Pintura Subida (Ford Ranger)',
+        body: 'Alfredo registró compra de 700ml de pintura preparada con tapa de gasolina ($45) con foto de la boleta.'
+      },
+      {
+        title: '✅ Unidad al 100% — Informe PDF Enviado a Luis',
+        body: 'Se completaron todas las tareas de la unidad. El reporte con fotos Antes/Después ya está disponible para el cliente.'
+      }
+    ];
+
+    function triggerLiveAlert() {
+      const a = demoAlerts[alertIdx % demoAlerts.length];
+      alertIdx++;
+      document.getElementById('toastTitle').textContent = a.title;
+      document.getElementById('toastBody').textContent = a.body;
+      document.getElementById('liveToast').classList.remove('hidden');
+      const badge = document.getElementById('notifBadge');
+      badge.textContent = parseInt(badge.textContent, 10) + 1;
+    }
+
+    function openPhotoModal(title, desc) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalDesc').textContent = desc;
+      document.getElementById('photoModal').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+      document.getElementById('photoModal').classList.add('hidden');
+    }
+
+    function cyclePartDamage(card) {
+      const badge = card.querySelector('span');
+      const txt = badge.textContent.trim();
+      if (txt === 'Sano') {
+        badge.textContent = 'Chapería: LEVE';
+        badge.className = 'inline-block mt-1.5 px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold';
+        card.className = 'p-3 rounded-xl border-2 border-amber-500 bg-amber-950/30 cursor-pointer transition';
+      } else if (txt.includes('LEVE')) {
+        badge.textContent = 'Chapería: FUERTE';
+        badge.className = 'inline-block mt-1.5 px-2 py-0.5 rounded bg-rose-600 text-white font-bold';
+        card.className = 'p-3 rounded-xl border-2 border-rose-500 bg-rose-950/30 cursor-pointer transition';
+      } else {
+        badge.textContent = 'Sano';
+        badge.className = 'inline-block mt-1.5 px-2 py-0.5 rounded bg-slate-800 text-slate-400';
+        card.className = 'p-3 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-blue-500 transition';
+      }
+    }
+
+    function approveQuote() {
+      const badge = document.getElementById('quoteStatusBadge');
+      badge.textContent = '🟢 APROBADA POR CHILE Y BOLIVIA (OT #204 Activa)';
+      badge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-slate-950';
+      document.getElementById('auditV3').textContent = '✓ APROBADO: Alfredo (Chile) aceptó las modificaciones de Bolivia. Orden de Trabajo generada.';
+      document.getElementById('auditV3').className = 'text-emerald-400 font-bold pt-1';
+      document.getElementById('btnApproveQuote').textContent = '✓ Orden de Trabajo Creada';
+    }
+
+    function recalcOTProgress() {
+      const checks = document.querySelectorAll('.ot-task-check');
+      let done = 0;
+      checks.forEach(c => { if (c.checked) done++; });
+      const pct = Math.round((done / checks.length) * 100);
+      document.getElementById('otProgressText').textContent = pct + '% (' + done + ' / ' + checks.length + ' tareas)';
+      document.getElementById('otProgressBar').style.width = pct + '%';
+      if (pct === 100) triggerLiveAlert();
+    }
+
+    function grantExtension() {
+      document.getElementById('taskDelayBadge').textContent = '🌧️ Prórroga +2 Días (Lluvia / Sin Oxígeno)';
+      document.getElementById('taskDelayBadge').className = 'px-2.5 py-1 rounded-full bg-blue-600 text-white font-bold';
+      document.getElementById('penaltyCalculation').textContent = ' → Exonerado de multa por motivo justificado (Pagar $300)';
+      document.getElementById('penaltyCalculation').className = 'text-emerald-400 font-mono font-bold';
+    }
+
+    function applyPenalty() {
+      document.getElementById('taskDelayBadge').textContent = '💸 Multa Aplicada (-$60 por 3d de atraso)';
+      document.getElementById('taskDelayBadge').className = 'px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold';
+      document.getElementById('penaltyCalculation').textContent = ' → Descuento confirmado en sistema: Pagar solo $240.';
+      document.getElementById('penaltyCalculation').className = 'text-rose-400 font-mono font-bold';
+    }
+
+    function reassignWorker() {
+      document.getElementById('contractorAssignee').innerHTML = 'Reasignado a: <strong>Roberto Silva (Chapero ★★★★★)</strong> <em>(Por atraso de Mario Q.)</em>';
+      document.getElementById('taskDelayBadge').textContent = '🔄 Reasignado';
+      document.getElementById('taskDelayBadge').className = 'px-2.5 py-1 rounded-full bg-amber-500 text-slate-950 font-bold';
+    }
+  </script>
+</body>
+</html>
